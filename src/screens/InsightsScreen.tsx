@@ -5,7 +5,14 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useFinance } from "@/hooks/useFinance";
 import { theme } from "@/constants/theme";
-import { getCategoryTotals, getCurrentMonthTransactions, getMonthlySummary, buildTrend } from "@/utils/finance";
+import {
+  buildTrend,
+  getBudgetPace,
+  getBudgetPaceInsight,
+  getCategoryTotals,
+  getCurrentMonthTransactions,
+  getMonthlySummary,
+} from "@/utils/finance";
 import { formatCurrency } from "@/utils/currency";
 
 export function InsightsScreen() {
@@ -14,6 +21,7 @@ export function InsightsScreen() {
   const summary = getMonthlySummary(transactions, budget);
   const categoryTotals = getCategoryTotals(currentMonth);
   const trend = buildTrend(transactions);
+  const budgetPace = getBudgetPace(summary, budget);
   const topCategoryEntry = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
   const maxTrend = Math.max(...trend.map((item) => item.amount), 1);
 
@@ -56,6 +64,28 @@ export function InsightsScreen() {
         <View style={styles.summaryItem}>
           <Text style={styles.summaryLabel}>This month expenses</Text>
           <Text style={styles.summaryValue}>{formatCurrency(summary.expenses)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Budget pace</Text>
+        <Text style={styles.topCategory}>
+          {budgetPace.status === "over"
+            ? "Over pace"
+            : budgetPace.status === "ahead"
+              ? "Ahead of pace"
+              : "On pace"}
+        </Text>
+        <Text style={styles.topValue}>{getBudgetPaceInsight(summary, budget)}</Text>
+        <View style={styles.paceGrid}>
+          <View style={styles.paceStat}>
+            <Text style={styles.paceLabel}>Safe daily spend</Text>
+            <Text style={styles.paceValue}>{formatCurrency(budgetPace.recommendedDailySpend)}</Text>
+          </View>
+          <View style={styles.paceStat}>
+            <Text style={styles.paceLabel}>Projected month-end</Text>
+            <Text style={styles.paceValue}>{formatCurrency(budgetPace.projectedMonthEndSpend)}</Text>
+          </View>
         </View>
       </View>
 
@@ -191,6 +221,27 @@ const styles = StyleSheet.create({
   },
   categoryList: {
     gap: theme.spacing.md,
+  },
+  paceGrid: {
+    flexDirection: "row",
+    gap: theme.spacing.md,
+  },
+  paceStat: {
+    flex: 1,
+    gap: 8,
+    padding: 14,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  paceLabel: {
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.caption,
+  },
+  paceValue: {
+    color: theme.colors.text,
+    fontWeight: "800",
   },
   categoryRow: {
     gap: 8,

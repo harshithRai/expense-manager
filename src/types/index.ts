@@ -38,3 +38,14 @@ export type MonthlySummary = {
   remainingBudget: number;
   savingsRate: number;
 };
+
+export type BudgetPace = {
+  daysElapsed: number;
+  daysLeft: number;
+  expectedSpend: number;
+  actualDailySpend: number;
+  recommendedDailySpend: number;
+  projectedMonthEndSpend: number;
+  variance: number;
+  status: "ahead" | "on-track" | "over";
+};

@@ -6,12 +6,13 @@ import { Screen } from "@/components/ui/Screen";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { BalanceCard } from "@/components/cards/BalanceCard";
 import { InsightCard } from "@/components/cards/InsightCard";
+import { BudgetPaceCard } from "@/components/cards/BudgetPaceCard";
 import { TransactionItem } from "@/components/transactions/TransactionItem";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useFinance } from "@/hooks/useFinance";
 import { theme } from "@/constants/theme";
-import { getAvailableBalance, getMonthlySummary, getWeeklyFoodInsight } from "@/utils/finance";
+import { getAvailableBalance, getBudgetPace, getMonthlySummary, getWeeklyFoodInsight } from "@/utils/finance";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { formatCurrency } from "@/utils/currency";
 
@@ -19,6 +20,7 @@ export function HomeScreen() {
   const { transactions, budget, loading, openQuickAdd, deleteTransaction } = useFinance();
   const summary = getMonthlySummary(transactions, budget);
   const availableBalance = getAvailableBalance(transactions);
+  const budgetPace = getBudgetPace(summary, budget);
   const recentTransactions = transactions.slice(0, 4);
   const monthLabel = new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric" }).format(new Date());
 
@@ -48,6 +50,8 @@ export function HomeScreen() {
         remainingBudget={summary.remainingBudget}
         savingsRate={summary.savingsRate}
       />
+
+      {!loading && budget.monthlyBudget > 0 ? <BudgetPaceCard pace={budgetPace} /> : null}
 
       {loading ? <LoadingState /> : <InsightCard message={getWeeklyFoodInsight(transactions)} />}
 

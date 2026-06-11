@@ -1,4 +1,4 @@
-import { Budget, MonthlySummary, Transaction, TransactionType } from "@/types";
+import { Budget, BudgetPace, MonthlySummary, Transaction, TransactionType } from "@/types";
 import { monthKey } from "@/utils/date";
 
 export function getCurrentMonthTransactions(transactions: Transaction[]) {
@@ -105,4 +105,69 @@ export function buildTrend(transactions: Transaction[]) {
     .sort((a, b) => a.stamp - b.stamp)
     .slice(-4)
     .map(({ label, amount }) => ({ label, amount }));
+}
+
+export function getBudgetPace(summary: MonthlySummary, budget: Budget, date = new Date()): BudgetPace {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const totalDays = new Date(year, month + 1, 0).getDate();
+  const daysElapsed = Math.min(Math.max(date.getDate(), 1), totalDays);
+  const daysLeft = Math.max(totalDays - daysElapsed, 0);
+  const expectedSpend = (budget.monthlyBudget / totalDays) * daysElapsed;
+  const actualDailySpend = summary.expenses / daysElapsed;
+  const remainingBudget = Math.max(summary.remainingBudget, 0);
+  const recommendedDailySpend = daysLeft > 0 ? remainingBudget / daysLeft : 0;
+  const projectedMonthEndSpend = actualDailySpend * totalDays;
+  const variance = summary.expenses - expectedSpend;
+  const tolerance = Math.max(budget.monthlyBudget * 0.04, 500);
+
+  let status: BudgetPace["status"] = "on-track";
+  if (variance > tolerance) {
+    status = "over";
+  } else if (variance < -tolerance) {
+    status = "ahead";
+  }
+
+  return {
+    daysElapsed,
+    daysLeft,
+    expectedSpend,
+    actualDailySpend,
+    recommendedDailySpend,
+    projectedMonthEndSpend,
+    variance,
+    status,
+  };
+}
+
+export function getBudgetPaceInsight(summary: MonthlySummary, budget: Budget, date = new Date()) {
+  const pace = getBudgetPace(summary, budget, date);
+
+  if (budget.monthlyBudget <= 0) {
+    return "Set a monthly budget to unlock pace tracking.";
+  }
+
+  if (summary.expenses === 0) {
+    return `You have ${formatRoundedDaily(pace.recommendedDailySpend)} per day available for the rest of the month.`;
+  }
+
+  if (pace.status === "over") {
+    return `You are spending ${formatRoundedDaily(pace.actualDailySpend)} per day, above the ${formatRoundedDaily(
+      pace.expectedSpend / pace.daysElapsed
+    )} pace.`;
+  }
+
+  if (pace.status === "ahead") {
+    return `You are under budget pace. You can spend about ${formatRoundedDaily(
+      pace.recommendedDailySpend
+    )} per day for the remaining ${pace.daysLeft} days.`;
+  }
+
+  return `You are on budget pace with about ${formatRoundedDaily(
+    pace.recommendedDailySpend
+  )} per day left for the rest of the month.`;
+}
+
+function formatRoundedDaily(amount: number) {
+  return `₹${Math.round(amount).toLocaleString("en-IN")}`;
 }
