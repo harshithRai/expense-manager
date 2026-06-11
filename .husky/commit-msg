@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-npx --no -- commitlint --edit "$1"
+node scripts/validate-commit-msg.js "$1"
