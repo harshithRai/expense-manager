@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { ArrowDownLeft, ArrowUpRight, ChevronRight, Trash2 } from "lucide-react-native";
+import { ArrowDownLeft, ArrowUpRight, ChevronRight, PiggyBank, Trash2 } from "lucide-react-native";
 import { theme } from "@/constants/theme";
 import { Transaction } from "@/types";
 import { formatCurrency } from "@/utils/currency";
@@ -15,12 +15,20 @@ type Props = {
 
 export function TransactionItem({ transaction, onEdit, onDelete }: Props) {
   const isIncome = transaction.type === "income";
+  const isInvestment = transaction.type === "investment";
 
   return (
     <PressableScale haptic="light" onPress={onEdit} style={styles.card}>
-      <View style={[styles.iconWrap, isIncome ? styles.iconIncome : styles.iconExpense]}>
+      <View
+        style={[
+          styles.iconWrap,
+          isIncome ? styles.iconIncome : isInvestment ? styles.iconInvestment : styles.iconExpense,
+        ]}
+      >
         {isIncome ? (
           <ArrowDownLeft size={18} color={theme.colors.success} />
+        ) : isInvestment ? (
+          <PiggyBank size={18} color={theme.colors.accent} />
         ) : (
           <ArrowUpRight size={18} color={theme.colors.danger} />
         )}
@@ -37,7 +45,12 @@ export function TransactionItem({ transaction, onEdit, onDelete }: Props) {
             </Text>
           </View>
           <View style={styles.amountWrap}>
-            <Text style={[styles.amount, isIncome ? styles.amountIncome : styles.amountExpense]}>
+            <Text
+              style={[
+                styles.amount,
+                isIncome ? styles.amountIncome : isInvestment ? styles.amountInvestment : styles.amountExpense,
+              ]}
+            >
               {isIncome ? "+" : "-"}
               {formatCurrency(transaction.amount)}
             </Text>
@@ -80,6 +93,9 @@ const styles = StyleSheet.create({
   iconExpense: {
     backgroundColor: "rgba(255,107,129,0.1)",
   },
+  iconInvestment: {
+    backgroundColor: "rgba(121,168,255,0.14)",
+  },
   main: {
     flex: 1,
     gap: 10,
@@ -113,6 +129,9 @@ const styles = StyleSheet.create({
   },
   amountExpense: {
     color: theme.colors.text,
+  },
+  amountInvestment: {
+    color: theme.colors.accent,
   },
   meta: {
     color: theme.colors.textMuted,

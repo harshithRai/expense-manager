@@ -3,15 +3,16 @@ import { StyleSheet, Text, View } from "react-native";
 import { Screen } from "@/components/ui/Screen";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { MonthlyFlowCard } from "@/components/cards/MonthlyFlowCard";
 import { useFinance } from "@/hooks/useFinance";
 import { theme } from "@/constants/theme";
 import {
-  buildTrend,
-  getBudgetPace,
-  getBudgetPaceInsight,
+  buildMonthlyFlow,
   getCategoryTotals,
   getCurrentMonthTransactions,
   getMonthlySummary,
+  getOutflowShare,
+  getTopCategory,
 } from "@/utils/finance";
 import { formatCurrency } from "@/utils/currency";
 
@@ -19,17 +20,20 @@ export function InsightsScreen() {
   const { transactions, budget, loading, openQuickAdd } = useFinance();
   const currentMonth = getCurrentMonthTransactions(transactions);
   const summary = getMonthlySummary(transactions, budget);
-  const categoryTotals = getCategoryTotals(currentMonth);
-  const trend = buildTrend(transactions);
-  const budgetPace = getBudgetPace(summary, budget);
-  const topCategoryEntry = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
-  const maxTrend = Math.max(...trend.map((item) => item.amount), 1);
+  const monthlyFlow = buildMonthlyFlow(transactions);
+  const spendingTotals = getCategoryTotals(currentMonth, "expense");
+  const investmentTotals = getCategoryTotals(currentMonth, "investment");
+  const topSpend = getTopCategory(currentMonth, "expense");
+  const topInvestment = getTopCategory(currentMonth, "investment");
+  const outflowShare = getOutflowShare(summary);
+  const totalOutflow = summary.expenses + summary.investments;
+  const maxOutflow = Math.max(...Object.values({ ...spendingTotals, ...investmentTotals }), 1);
 
   if (loading) {
     return (
       <Screen>
-        <Text style={styles.heading}>Insights</Text>
-        <LoadingState label="Crunching monthly patterns..." />
+        <Text style={styles.heading}>Trends</Text>
+        <LoadingState label="Preparing charts..." />
       </Screen>
     );
   }
@@ -37,10 +41,10 @@ export function InsightsScreen() {
   if (transactions.length === 0) {
     return (
       <Screen>
-        <Text style={styles.heading}>Insights</Text>
+        <Text style={styles.heading}>Trends</Text>
         <EmptyState
-          title="Insights need a little activity"
-          description="Add a few entries and this screen will turn them into useful pace, category, and trend signals."
+          title="Charts need a little activity"
+          description="Add a few transactions and this screen will show cash flow, spending mix, and where investments are going."
           actionLabel="Add transaction"
           onAction={() => openQuickAdd()}
         />
@@ -51,9 +55,15 @@ export function InsightsScreen() {
   return (
     <Screen>
       <View style={styles.hero}>
-        <Text style={styles.heading}>Insights</Text>
-        <Text style={styles.subheading}>Quiet signals, surfaced without dashboard clutter.</Text>
+        <Text style={styles.heading}>Trends</Text>
+        <Text style={styles.subheading}>A cleaner read on income, expenditure, and investments.</Text>
       </View>
+
+      <MonthlyFlowCard
+        title="Cash flow by month"
+        subtitle="Compare what came in against what went out to spending and investments."
+        data={monthlyFlow}
+      />
 
       <View style={styles.summaryCard}>
         <View style={styles.summaryItem}>
@@ -62,86 +72,81 @@ export function InsightsScreen() {
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>This month expenses</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(summary.expenses)}</Text>
+          <Text style={styles.summaryLabel}>Net cash flow</Text>
+          <Text style={styles.summaryValue}>{formatCurrency(summary.netCashflow)}</Text>
         </View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Budget pace</Text>
-        <Text style={styles.topCategory}>
-          {budgetPace.status === "over"
-            ? "Over pace"
-            : budgetPace.status === "ahead"
-              ? "Ahead of pace"
-              : "On pace"}
+        <Text style={styles.cardTitle}>Outflow split</Text>
+        <Text style={styles.cardCopy}>
+          {totalOutflow > 0
+            ? `${Math.round(outflowShare.expenses)}% expenditure and ${Math.round(outflowShare.investments)}% investment this month.`
+            : "No outflow recorded for this month yet."}
         </Text>
-        <Text style={styles.topValue}>{getBudgetPaceInsight(summary, budget)}</Text>
-        <View style={styles.paceGrid}>
-          <View style={styles.paceStat}>
-            <Text style={styles.paceLabel}>Safe daily spend</Text>
-            <Text style={styles.paceValue}>{formatCurrency(budgetPace.recommendedDailySpend)}</Text>
-          </View>
-          <View style={styles.paceStat}>
-            <Text style={styles.paceLabel}>Projected month-end</Text>
-            <Text style={styles.paceValue}>{formatCurrency(budgetPace.projectedMonthEndSpend)}</Text>
-          </View>
+        <View style={styles.splitBar}>
+          {totalOutflow > 0 ? (
+            <>
+              <View style={[styles.spendFill, { width: `${outflowShare.expenses}%` }]} />
+              <View style={[styles.investmentFill, { width: `${outflowShare.investments}%` }]} />
+            </>
+          ) : null}
+        </View>
+      </View>
+
+      <View style={styles.dualGrid}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Top spending category</Text>
+          <Text style={styles.heroValue}>{topSpend ? topSpend[0] : "No spend yet"}</Text>
+          <Text style={styles.cardCopy}>
+            {topSpend ? formatCurrency(topSpend[1]) : "Track a few expenses to compare categories."}
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Top investment bucket</Text>
+          <Text style={styles.heroValue}>{topInvestment ? topInvestment[0] : "No investments yet"}</Text>
+          <Text style={styles.cardCopy}>
+            {topInvestment ? formatCurrency(topInvestment[1]) : "Log investments to see where capital is going."}
+          </Text>
         </View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Top spending category</Text>
-        <Text style={styles.topCategory}>{topCategoryEntry ? topCategoryEntry[0] : "No expense data yet"}</Text>
-        <Text style={styles.topValue}>
-          {topCategoryEntry ? formatCurrency(topCategoryEntry[1]) : "Start logging expenses to compare categories."}
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Category-wise spend</Text>
-        {Object.keys(categoryTotals).length === 0 ? (
-          <Text style={styles.emptyCopy}>No expense categories this month yet.</Text>
+        <Text style={styles.cardTitle}>Category totals this month</Text>
+        {Object.keys(spendingTotals).length === 0 && Object.keys(investmentTotals).length === 0 ? (
+          <Text style={styles.cardCopy}>No expenditure or investment categories recorded this month.</Text>
         ) : (
           <View style={styles.categoryList}>
-            {Object.entries(categoryTotals)
-              .sort((a, b) => b[1] - a[1])
-              .map(([category, total]) => {
-                const width: `${number}%` = summary.expenses > 0 ? `${(total / summary.expenses) * 100}%` : "0%";
+            {[
+              ...Object.entries(spendingTotals).map(([category, total]) => ({
+                key: `spend-${category}`,
+                category,
+                total,
+                color: theme.colors.danger,
+              })),
+              ...Object.entries(investmentTotals).map(([category, total]) => ({
+                key: `invest-${category}`,
+                category,
+                total,
+                color: theme.colors.accent,
+              })),
+            ]
+              .sort((a, b) => b.total - a.total)
+              .map((item) => {
+                const width: `${number}%` = `${(item.total / maxOutflow) * 100}%`;
                 return (
-                  <View key={category} style={styles.categoryRow}>
+                  <View key={item.key} style={styles.categoryRow}>
                     <View style={styles.categoryLine}>
-                      <Text style={styles.categoryName}>{category}</Text>
-                      <Text style={styles.categoryValue}>{formatCurrency(total)}</Text>
+                      <Text style={styles.categoryName}>{item.category}</Text>
+                      <Text style={styles.categoryValue}>{formatCurrency(item.total)}</Text>
                     </View>
                     <View style={styles.track}>
-                      <View style={[styles.fill, { width }]} />
+                      <View style={[styles.fill, { width, backgroundColor: item.color }]} />
                     </View>
                   </View>
                 );
               })}
-          </View>
-        )}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Spending trend</Text>
-        {trend.length === 0 ? (
-          <Text style={styles.emptyCopy}>Trend data appears after expense activity.</Text>
-        ) : (
-          <View style={styles.trendRow}>
-            {trend.map((item) => (
-              <View key={item.label} style={styles.trendItem}>
-                <View style={styles.trendTrack}>
-                  <View
-                    style={[
-                      styles.trendBar,
-                      { height: (item.amount / maxTrend) * 132 + 8 },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.trendLabel}>{item.label}</Text>
-              </View>
-            ))}
           </View>
         )}
       </View>
@@ -205,43 +210,34 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.h3,
     fontWeight: "800",
   },
-  topCategory: {
-    color: theme.colors.text,
-    fontSize: 30,
-    fontWeight: "800",
-  },
-  topValue: {
-    color: theme.colors.textMuted,
-    fontSize: theme.typography.body,
-  },
-  emptyCopy: {
+  cardCopy: {
     color: theme.colors.textMuted,
     fontSize: theme.typography.body,
     lineHeight: 22,
   },
+  splitBar: {
+    flexDirection: "row",
+    height: 14,
+    borderRadius: 999,
+    overflow: "hidden",
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  spendFill: {
+    backgroundColor: theme.colors.danger,
+  },
+  investmentFill: {
+    backgroundColor: theme.colors.accent,
+  },
+  dualGrid: {
+    gap: theme.spacing.md,
+  },
+  heroValue: {
+    color: theme.colors.text,
+    fontSize: 28,
+    fontWeight: "800",
+  },
   categoryList: {
     gap: theme.spacing.md,
-  },
-  paceGrid: {
-    flexDirection: "row",
-    gap: theme.spacing.md,
-  },
-  paceStat: {
-    flex: 1,
-    gap: 8,
-    padding: 14,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceSoft,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  paceLabel: {
-    color: theme.colors.textMuted,
-    fontSize: theme.typography.caption,
-  },
-  paceValue: {
-    color: theme.colors.text,
-    fontWeight: "800",
   },
   categoryRow: {
     gap: 8,
@@ -253,7 +249,7 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     color: theme.colors.text,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   categoryValue: {
     color: theme.colors.textMuted,
@@ -261,43 +257,12 @@ const styles = StyleSheet.create({
   },
   track: {
     height: 10,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.surfaceMuted,
+    borderRadius: 999,
+    backgroundColor: theme.colors.surfaceSoft,
     overflow: "hidden",
   },
   fill: {
     height: "100%",
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.accent,
-  },
-  trendRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: theme.spacing.md,
-    height: 160,
-  },
-  trendItem: {
-    flex: 1,
-    alignItems: "center",
-    gap: 10,
-  },
-  trendTrack: {
-    width: "100%",
-    flex: 1,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceMuted,
-    justifyContent: "flex-end",
-    overflow: "hidden",
-  },
-  trendBar: {
-    width: "100%",
-    minHeight: 8,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.accentSecondary,
-  },
-  trendLabel: {
-    color: theme.colors.textMuted,
-    fontSize: theme.typography.caption,
+    borderRadius: 999,
   },
 });

@@ -1,4 +1,4 @@
-export type TransactionType = "income" | "expense";
+export type TransactionType = "income" | "expense" | "investment";
 
 export type Transaction = {
   id: string;
@@ -34,18 +34,8 @@ export type QuickAddState = {
 export type MonthlySummary = {
   income: number;
   expenses: number;
+  investments: number;
   balance: number;
   remainingBudget: number;
-  savingsRate: number;
-};
-
-export type BudgetPace = {
-  daysElapsed: number;
-  daysLeft: number;
-  expectedSpend: number;
-  actualDailySpend: number;
-  recommendedDailySpend: number;
-  projectedMonthEndSpend: number;
-  variance: number;
-  status: "ahead" | "on-track" | "over";
+  netCashflow: number;
 };

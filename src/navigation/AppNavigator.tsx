@@ -85,6 +85,7 @@ function AppTabs() {
           name="Insights"
           component={InsightsScreen}
           options={{
+            tabBarLabel: "Trends",
             tabBarIcon: ({ color }) => <TrendingUp size={iconSize} color={color} />,
           }}
         />

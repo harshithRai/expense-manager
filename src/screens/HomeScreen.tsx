@@ -5,14 +5,13 @@ import { ArrowRight, Sparkles } from "lucide-react-native";
 import { Screen } from "@/components/ui/Screen";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { BalanceCard } from "@/components/cards/BalanceCard";
-import { InsightCard } from "@/components/cards/InsightCard";
-import { BudgetPaceCard } from "@/components/cards/BudgetPaceCard";
+import { MonthlyFlowCard } from "@/components/cards/MonthlyFlowCard";
 import { TransactionItem } from "@/components/transactions/TransactionItem";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useFinance } from "@/hooks/useFinance";
 import { theme } from "@/constants/theme";
-import { getAvailableBalance, getBudgetPace, getMonthlySummary, getWeeklyFoodInsight } from "@/utils/finance";
+import { buildMonthlyFlow, getAvailableBalance, getMonthlySummary, getOutflowShare } from "@/utils/finance";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { formatCurrency } from "@/utils/currency";
 
@@ -20,7 +19,9 @@ export function HomeScreen() {
   const { transactions, budget, loading, openQuickAdd, deleteTransaction } = useFinance();
   const summary = getMonthlySummary(transactions, budget);
   const availableBalance = getAvailableBalance(transactions);
-  const budgetPace = getBudgetPace(summary, budget);
+  const monthlyFlow = buildMonthlyFlow(transactions);
+  const outflowShare = getOutflowShare(summary);
+  const totalOutflow = summary.expenses + summary.investments;
   const recentTransactions = transactions.slice(0, 4);
   const monthLabel = new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric" }).format(new Date());
 
@@ -47,13 +48,50 @@ export function HomeScreen() {
         availableBalance={availableBalance}
         income={summary.income}
         expenses={summary.expenses}
+        investments={summary.investments}
         remainingBudget={summary.remainingBudget}
-        savingsRate={summary.savingsRate}
+        netCashflow={summary.netCashflow}
       />
 
-      {!loading && budget.monthlyBudget > 0 ? <BudgetPaceCard pace={budgetPace} /> : null}
-
-      {loading ? <LoadingState /> : <InsightCard message={getWeeklyFoodInsight(transactions)} />}
+      {loading ? (
+        <LoadingState label="Preparing your monthly flow..." />
+      ) : (
+        <>
+          <MonthlyFlowCard
+            title="Monthly flow"
+            subtitle="See income, expenditure, and investments together instead of guessing where cash moved."
+            data={monthlyFlow}
+          />
+          <View style={styles.outflowCard}>
+            <View style={styles.outflowHeader}>
+              <Text style={styles.outflowTitle}>This month outflow mix</Text>
+              <Text style={styles.outflowSubtitle}>
+                {summary.expenses + summary.investments > 0
+                  ? `${Math.round(outflowShare.expenses)}% spending • ${Math.round(outflowShare.investments)}% investing`
+                  : "No outflow logged yet"}
+              </Text>
+            </View>
+            <View style={styles.outflowBar}>
+              {totalOutflow > 0 ? (
+                <>
+                  <View style={[styles.outflowSpendFill, { width: `${outflowShare.expenses}%` }]} />
+                  <View style={[styles.outflowInvestmentFill, { width: `${outflowShare.investments}%` }]} />
+                </>
+              ) : null}
+            </View>
+            <View style={styles.outflowStats}>
+              <View style={styles.outflowStat}>
+                <Text style={styles.outflowStatLabel}>Expenditure</Text>
+                <Text style={styles.outflowStatValue}>{formatCurrency(summary.expenses)}</Text>
+              </View>
+              <View style={styles.outflowStat}>
+                <Text style={styles.outflowStatLabel}>Investment</Text>
+                <Text style={styles.outflowStatValue}>{formatCurrency(summary.investments)}</Text>
+              </View>
+            </View>
+          </View>
+        </>
+      )}
 
       <SectionHeader title="Recent activity" />
       {loading ? (
@@ -61,7 +99,7 @@ export function HomeScreen() {
       ) : recentTransactions.length === 0 ? (
         <EmptyState
           title="Your ledger is still quiet"
-          description="Add one expense or income entry and the home screen will start surfacing balance, pace, and patterns."
+          description="Add one transaction and the home screen will start surfacing balance, monthly flow, and recent activity."
           actionLabel="Add first entry"
           onAction={() => openQuickAdd()}
         />
@@ -70,9 +108,7 @@ export function HomeScreen() {
           <View style={styles.listHeader}>
             <Text style={styles.listEyebrow}>Latest moves</Text>
             <Text style={styles.listSummary}>
-              {summary.expenses > 0
-                ? `${formatCurrency(summary.expenses / Math.max(recentTransactions.length, 1))} avg per entry`
-                : "Fresh and tidy"}
+              {recentTransactions.length === 1 ? "1 recent entry" : `${recentTransactions.length} recent entries`}
             </Text>
           </View>
           <View style={styles.list}>
@@ -162,5 +198,63 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: theme.spacing.md,
+  },
+  outflowCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
+    ...theme.shadow.soft,
+  },
+  outflowHeader: {
+    gap: 6,
+  },
+  outflowTitle: {
+    color: theme.colors.text,
+    fontSize: theme.typography.h3,
+    fontWeight: "800",
+  },
+  outflowSubtitle: {
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.body,
+    lineHeight: 21,
+  },
+  outflowBar: {
+    flexDirection: "row",
+    height: 14,
+    borderRadius: 999,
+    overflow: "hidden",
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  outflowSpendFill: {
+    backgroundColor: theme.colors.danger,
+  },
+  outflowInvestmentFill: {
+    backgroundColor: theme.colors.accent,
+  },
+  outflowStats: {
+    flexDirection: "row",
+    gap: theme.spacing.md,
+  },
+  outflowStat: {
+    flex: 1,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: theme.radius.md,
+    padding: 14,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  outflowStatLabel: {
+    color: theme.colors.textSoft,
+    fontSize: theme.typography.caption,
+    fontWeight: "700",
+  },
+  outflowStatValue: {
+    color: theme.colors.text,
+    fontSize: 16,
+    fontWeight: "800",
   },
 });

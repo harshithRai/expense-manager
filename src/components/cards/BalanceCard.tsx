@@ -9,17 +9,17 @@ type Props = {
   availableBalance: number;
   income: number;
   expenses: number;
+  investments: number;
   remainingBudget: number;
-  savingsRate: number;
+  netCashflow: number;
 };
 
 export function BalanceCard(props: Props) {
-  const net = props.income - props.expenses;
   const stats = [
     { label: "Income", value: formatCurrency(props.income) },
-    { label: "Expenses", value: formatCurrency(props.expenses) },
+    { label: "Expenditure", value: formatCurrency(props.expenses) },
+    { label: "Investments", value: formatCurrency(props.investments) },
     { label: "Budget Left", value: formatCurrency(props.remainingBudget) },
-    { label: "Saved", value: `${Math.round(props.savingsRate)}%` },
   ];
 
   return (
@@ -32,7 +32,10 @@ export function BalanceCard(props: Props) {
           </View>
           <View style={styles.netPill}>
             <Text style={styles.netLabel}>Net this month</Text>
-            <Text style={styles.netValue}>{net >= 0 ? "+" : "-"}{formatCurrency(Math.abs(net))}</Text>
+            <Text style={styles.netValue}>
+              {props.netCashflow >= 0 ? "+" : "-"}
+              {formatCurrency(Math.abs(props.netCashflow))}
+            </Text>
           </View>
         </View>
         <View style={styles.grid}>

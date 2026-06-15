@@ -4,7 +4,7 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@g
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Plus } from "lucide-react-native";
 import { theme } from "@/constants/theme";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/constants/categories";
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, INVESTMENT_CATEGORIES } from "@/constants/categories";
 import { useFinance } from "@/hooks/useFinance";
 import { Chip } from "@/components/ui/Chip";
 import { PressableScale } from "@/components/ui/PressableScale";
@@ -16,7 +16,7 @@ function createDefaultDraft(): TransactionDraft {
     title: "",
     amount: "",
     type: "expense",
-    category: "Food",
+    category: getDefaultCategory("expense"),
     date: toISODate(),
     note: "",
   };
@@ -29,10 +29,12 @@ export function TransactionSheet() {
   const [saving, setSaving] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showDateControls, setShowDateControls] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const amountRef = useRef<TextInput>(null);
   const snapPoints = useMemo(() => ["68%", "84%"], []);
   const navGuardHeight = Platform.OS === "android" ? Math.max(insets.bottom + 8, 40) : Math.max(insets.bottom, 16);
-  const contentBottomPadding = navGuardHeight + theme.spacing.xxxl + theme.spacing.xl;
+  const contentBottomPadding =
+    navGuardHeight + theme.spacing.xxxl + theme.spacing.xl + (showDetails || keyboardVisible ? theme.spacing.xxxl : 0);
   const today = useMemo(() => startOfDay(new Date()), []);
   const selectedDate = new Date(draft.date);
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(selectedDate));
@@ -64,13 +66,40 @@ export function TransactionSheet() {
     }
   }, [quickAdd.editingTransactionId, transactions]);
 
-  const categories = draft.type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener("keyboardDidShow", () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => setKeyboardVisible(false));
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  const categories =
+    draft.type === "expense"
+      ? EXPENSE_CATEGORIES
+      : draft.type === "investment"
+        ? INVESTMENT_CATEGORIES
+        : INCOME_CATEGORIES;
+
+  useEffect(() => {
+    if (!categories.some((category) => category === draft.category)) {
+      setDraft((current) => ({ ...current, category: getDefaultCategory(current.type) }));
+    }
+  }, [categories, draft.category]);
+
   const isValid = Number(draft.amount) > 0 && Boolean(draft.category);
   const isEditing = Boolean(quickAdd.editingTransactionId);
-  const amountPresets = draft.type === "expense" ? ["200", "500", "1000", "2500"] : ["5000", "10000", "25000"];
+  const amountPresets =
+    draft.type === "expense"
+      ? ["200", "500", "1000", "2500"]
+      : draft.type === "investment"
+        ? ["1000", "2500", "5000", "10000"]
+        : ["5000", "10000", "25000"];
 
   const handleSheetChange = (index: number) => {
-    if (index >= 0) {
+    if (index >= 0 && !isEditing) {
       setTimeout(() => amountRef.current?.focus(), 180);
     }
   };
@@ -95,6 +124,24 @@ export function TransactionSheet() {
 
   const applyAmountPreset = (value: string) => {
     setDraft((current) => ({ ...current, amount: value }));
+  };
+
+  const updateDraftCategory = (nextCategory: string) => {
+    setDraft((current) => ({
+      ...current,
+      category: nextCategory,
+      title: nextCategory,
+    }));
+  };
+
+  const updateDraftType = (nextType: TransactionDraft["type"]) => {
+    const nextCategory = getDefaultCategory(nextType);
+    setDraft((current) => ({
+      ...current,
+      type: nextType,
+      category: nextCategory,
+      title: nextCategory,
+    }));
   };
 
   const setDraftDate = (dateValue: string) => {
@@ -227,21 +274,15 @@ export function TransactionSheet() {
           ) : null}
 
           <View style={styles.typeRow}>
-            {(["expense", "income"] as const).map((type) => (
+            {(["expense", "income", "investment"] as const).map((type) => (
               <PressableScale
                 key={type}
                 haptic="selection"
-                onPress={() =>
-                  setDraft((current) => ({
-                    ...current,
-                    type,
-                    category: type === "expense" ? "Food" : "Salary",
-                  }))
-                }
+                onPress={() => updateDraftType(type)}
                 style={[styles.typeButton, draft.type === type && styles.typeButtonActive]}
               >
                 <Text style={[styles.typeText, draft.type === type && styles.typeTextActive]}>
-                  {type === "expense" ? "Expense" : "Income"}
+                  {type === "expense" ? "Expenditure" : type === "investment" ? "Investment" : "Income"}
                 </Text>
               </PressableScale>
             ))}
@@ -274,13 +315,20 @@ export function TransactionSheet() {
                   key={category}
                   label={category}
                   active={draft.category === category}
-                  onPress={() => setDraft((current) => ({ ...current, category }))}
+                  onPress={() => updateDraftCategory(category)}
                 />
               ))}
             </View>
           </View>
 
-          <PressableScale haptic="selection" onPress={() => setShowDetails((current) => !current)} style={styles.detailsToggle}>
+          <PressableScale
+            haptic="selection"
+            onPress={() => {
+              Keyboard.dismiss();
+              setShowDetails((current) => !current);
+            }}
+            style={styles.detailsToggle}
+          >
             <View style={styles.detailsToggleLeft}>
               <Plus size={15} color={theme.colors.textMuted} />
               <Text style={styles.detailsToggleText}>Optional details</Text>
@@ -335,6 +383,16 @@ export function TransactionSheet() {
 }
 
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+
+function getDefaultCategory(type: TransactionDraft["type"]) {
+  if (type === "expense") {
+    return EXPENSE_CATEGORIES[0];
+  }
+  if (type === "investment") {
+    return INVESTMENT_CATEGORIES[0];
+  }
+  return INCOME_CATEGORIES[0];
+}
 
 function startOfDay(date: Date) {
   const next = new Date(date);
