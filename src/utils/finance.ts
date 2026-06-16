@@ -89,3 +89,25 @@ export function getOutflowShare(summary: MonthlySummary) {
     investments: (summary.investments / totalOutflow) * 100,
   };
 }
+
+export function getCategoryBudgetSummaries(transactions: Transaction[], budget: Budget) {
+  const expenseTotals = getCategoryTotals(getCurrentMonthTransactions(transactions), "expense");
+  const categoryBudgets = budget.categoryBudgets ?? {};
+
+  return Object.entries(categoryBudgets)
+    .filter(([, limit]) => limit > 0)
+    .map(([category, limit]) => {
+      const spent = expenseTotals[category] ?? 0;
+      const remaining = limit - spent;
+      const usage = limit > 0 ? (spent / limit) * 100 : 0;
+
+      return {
+        category,
+        limit,
+        spent,
+        remaining,
+        usage,
+      };
+    })
+    .sort((a, b) => b.usage - a.usage);
+}

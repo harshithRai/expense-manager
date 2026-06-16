@@ -1,6 +1,7 @@
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { ArrowDownLeft, ArrowUpRight, ChevronRight, PiggyBank, Trash2 } from "lucide-react-native";
+import React, { useRef } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
+import { ArrowDownLeft, ArrowUpRight, ChevronRight, PencilLine, PiggyBank, Trash2 } from "lucide-react-native";
 import { theme } from "@/constants/theme";
 import { Transaction } from "@/types";
 import { formatCurrency } from "@/utils/currency";
@@ -14,71 +15,157 @@ type Props = {
 };
 
 export function TransactionItem({ transaction, onEdit, onDelete }: Props) {
+  const swipeRef = useRef<Swipeable>(null);
   const isIncome = transaction.type === "income";
   const isInvestment = transaction.type === "investment";
 
+  const closeAndRun = (callback: () => void) => {
+    swipeRef.current?.close();
+    callback();
+  };
+
   return (
-    <PressableScale haptic="light" onPress={onEdit} style={styles.card}>
-      <View
-        style={[
-          styles.iconWrap,
-          isIncome ? styles.iconIncome : isInvestment ? styles.iconInvestment : styles.iconExpense,
-        ]}
-      >
-        {isIncome ? (
-          <ArrowDownLeft size={18} color={theme.colors.success} />
-        ) : isInvestment ? (
-          <PiggyBank size={18} color={theme.colors.accent} />
-        ) : (
-          <ArrowUpRight size={18} color={theme.colors.danger} />
-        )}
-      </View>
-
-      <View style={styles.main}>
-        <View style={styles.row}>
-          <View style={styles.titleWrap}>
-            <Text numberOfLines={1} style={styles.title}>
-              {transaction.title}
-            </Text>
-            <Text style={styles.meta}>
-              {transaction.category} • {formatFriendlyDate(transaction.date)}
-            </Text>
-          </View>
-          <View style={styles.amountWrap}>
-            <Text
-              style={[
-                styles.amount,
-                isIncome ? styles.amountIncome : isInvestment ? styles.amountInvestment : styles.amountExpense,
-              ]}
-            >
-              {isIncome ? "+" : "-"}
-              {formatCurrency(transaction.amount)}
-            </Text>
-            <ChevronRight size={16} color={theme.colors.textSoft} />
-          </View>
+    <Swipeable
+      ref={swipeRef}
+      overshootRight={false}
+      renderRightActions={() => (
+        <View style={styles.revealActions}>
+          <Pressable onPress={() => closeAndRun(onEdit)} style={[styles.revealButton, styles.revealEdit]}>
+            <PencilLine size={16} color={theme.colors.text} />
+            <Text style={styles.revealText}>Edit</Text>
+          </Pressable>
+          <Pressable onPress={() => closeAndRun(onDelete)} style={[styles.revealButton, styles.revealDelete]}>
+            <Trash2 size={16} color={theme.colors.danger} />
+            <Text style={[styles.revealText, styles.revealDeleteText]}>Delete</Text>
+          </Pressable>
+        </View>
+      )}
+    >
+      <PressableScale haptic="light" onPress={onEdit} style={styles.card}>
+        <View style={[styles.edgeGlow, isIncome ? styles.edgeIncome : isInvestment ? styles.edgeInvestment : styles.edgeExpense]} />
+        <View
+          style={[
+            styles.iconWrap,
+            isIncome ? styles.iconIncome : isInvestment ? styles.iconInvestment : styles.iconExpense,
+          ]}
+        >
+          {isIncome ? (
+            <ArrowDownLeft size={18} color={theme.colors.success} />
+          ) : isInvestment ? (
+            <PiggyBank size={18} color={theme.colors.accent} />
+          ) : (
+            <ArrowUpRight size={18} color={theme.colors.danger} />
+          )}
         </View>
 
-        <View style={styles.footer}>
-          {transaction.note ? <Text style={styles.note}>{transaction.note}</Text> : <View />}
-          <PressableScale haptic="medium" onPress={onDelete} style={styles.actionButton}>
-            <Trash2 size={14} color={theme.colors.danger} />
-          </PressableScale>
+        <View style={styles.main}>
+          <View style={styles.row}>
+            <View style={styles.titleWrap}>
+              <Text numberOfLines={1} style={styles.title}>
+                {transaction.title}
+              </Text>
+              <Text style={styles.meta}>
+                {transaction.category} • {formatFriendlyDate(transaction.date)}
+              </Text>
+              {transaction.recurrence ? (
+                <View style={styles.recurringBadge}>
+                  <Text style={styles.recurringText}>
+                    {transaction.recurrence === "weekly" ? "Weekly repeat" : "Monthly repeat"}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+            <View style={styles.amountWrap}>
+              <Text
+                style={[
+                  styles.amount,
+                  isIncome ? styles.amountIncome : isInvestment ? styles.amountInvestment : styles.amountExpense,
+                ]}
+              >
+                {isIncome ? "+" : "-"}
+                {formatCurrency(transaction.amount)}
+              </Text>
+              <ChevronRight size={16} color={theme.colors.textSoft} />
+            </View>
+          </View>
+
+          <View style={styles.footer}>
+            {transaction.note ? <Text style={styles.note}>{transaction.note}</Text> : <Text style={styles.hint}>Swipe left for actions</Text>}
+            <View style={styles.actions}>
+              <View style={styles.actionBadge}>
+                <PencilLine size={12} color={theme.colors.textSoft} />
+              </View>
+              <View style={[styles.actionBadge, styles.deleteBadge]}>
+                <Trash2 size={12} color={theme.colors.danger} />
+              </View>
+            </View>
+          </View>
         </View>
-      </View>
-    </PressableScale>
+      </PressableScale>
+    </Swipeable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    overflow: "hidden",
     flexDirection: "row",
     gap: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: theme.radius.xl,
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: 16,
     ...theme.shadow.soft,
+  },
+  revealActions: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 10,
+    marginLeft: 12,
+  },
+  revealButton: {
+    width: 86,
+    borderRadius: theme.radius.xl,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+  },
+  revealEdit: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  revealDelete: {
+    backgroundColor: "rgba(255,107,129,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,107,129,0.18)",
+  },
+  revealText: {
+    color: theme.colors.text,
+    fontSize: theme.typography.caption,
+    fontWeight: "800",
+  },
+  revealDeleteText: {
+    color: theme.colors.danger,
+  },
+  edgeGlow: {
+    position: "absolute",
+    top: 14,
+    bottom: 14,
+    left: 0,
+    width: 3,
+    borderRadius: 999,
+  },
+  edgeIncome: {
+    backgroundColor: theme.colors.success,
+  },
+  edgeExpense: {
+    backgroundColor: theme.colors.danger,
+  },
+  edgeInvestment: {
+    backgroundColor: theme.colors.accent,
   },
   iconWrap: {
     width: 46,
@@ -138,24 +225,53 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.caption,
     lineHeight: 18,
   },
+  recurringBadge: {
+    alignSelf: "flex-start",
+    marginTop: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: theme.radius.pill,
+    backgroundColor: "rgba(121,168,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(121,168,255,0.2)",
+  },
+  recurringText: {
+    color: theme.colors.text,
+    fontSize: theme.typography.tiny,
+    fontWeight: "800",
+  },
   footer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
     gap: theme.spacing.md,
   },
-  actionButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  actionBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: theme.colors.surfaceMuted,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  deleteBadge: {
+    backgroundColor: "rgba(255,107,129,0.08)",
+    borderColor: "rgba(255,107,129,0.18)",
+  },
   note: {
     flex: 1,
+    color: theme.colors.textSoft,
+    fontSize: theme.typography.caption,
+    lineHeight: 18,
+  },
+  hint: {
     color: theme.colors.textSoft,
     fontSize: theme.typography.caption,
     lineHeight: 18,

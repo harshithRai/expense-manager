@@ -23,12 +23,13 @@ function AppTabs() {
   const { openQuickAdd } = useFinance();
   const iconSize = 20;
   const bottomInset = Math.max(insets.bottom, theme.spacing.md);
-  const tabBarHeight = 56 + bottomInset;
+  const tabBarHeight = 74 + bottomInset;
 
   return (
     <>
       <Tab.Navigator
         screenOptions={{
+          animation: "shift",
           headerShown: false,
           tabBarActiveTintColor: theme.colors.text,
           tabBarInactiveTintColor: theme.colors.textSoft,
@@ -36,7 +37,7 @@ function AppTabs() {
             styles.tabBar,
             {
               height: tabBarHeight,
-              paddingBottom: bottomInset,
+              paddingBottom: bottomInset + 4,
             },
           ],
           tabBarLabelStyle: styles.tabBarLabel,
@@ -125,29 +126,39 @@ export function AppNavigator() {
 const styles = StyleSheet.create({
   tabBar: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingTop: 10,
-    backgroundColor: theme.colors.backgroundElevated,
+    left: 16,
+    right: 16,
+    bottom: 10,
+    paddingTop: 12,
+    paddingHorizontal: 10,
+    backgroundColor: "rgba(14,19,32,0.92)",
     borderTopWidth: 0,
+    borderRadius: 28,
     elevation: 0,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    shadowColor: "#000000",
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 16 },
   },
   tabBarLabel: {
     fontSize: 11,
     fontWeight: "700",
-    marginTop: 2,
+    marginTop: 4,
   },
   centerTabButton: {
     alignItems: "center",
     justifyContent: "center",
-    width: 28,
-    height: 28,
-    marginTop: 2,
-    shadowColor: "#FFFFFF",
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 0,
+    width: 54,
+    height: 54,
+    marginTop: -10,
+    borderRadius: 27,
+    backgroundColor: theme.colors.accent,
+    shadowColor: theme.colors.accent,
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 2,
   },
 });

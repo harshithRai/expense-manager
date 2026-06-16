@@ -34,8 +34,8 @@ export function EmptyState({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: theme.radius.xl,
     padding: theme.spacing.xl,
     alignItems: "center",
     gap: theme.spacing.sm,
@@ -49,7 +49,9 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(121,168,255,0.1)",
+    backgroundColor: "rgba(121,168,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(121,168,255,0.18)",
     marginBottom: 4,
   },
   eyebrow: {
@@ -77,6 +79,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.pill,
     paddingHorizontal: 20,
     paddingVertical: 13,
+    ...theme.shadow.soft,
   },
   buttonText: {
     color: theme.colors.background,

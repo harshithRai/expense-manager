@@ -15,7 +15,7 @@ export async function saveTransactions(transactions: Transaction[]) {
 
 export async function loadBudget() {
   const raw = await AsyncStorage.getItem(BUDGET_KEY);
-  return raw ? (JSON.parse(raw) as Budget) : { monthlyBudget: 25000 };
+  return raw ? (JSON.parse(raw) as Budget) : { monthlyBudget: 25000, categoryBudgets: {} };
 }
 
 export async function saveBudget(budget: Budget) {

@@ -1,4 +1,5 @@
 export type TransactionType = "income" | "expense" | "investment";
+export type RecurrenceFrequency = "weekly" | "monthly";
 
 export type Transaction = {
   id: string;
@@ -8,6 +9,8 @@ export type Transaction = {
   category: string;
   date: string;
   note?: string;
+  recurrence?: RecurrenceFrequency;
+  recurrenceSourceId?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -24,6 +27,7 @@ export type TransactionDraft = {
   category: string;
   date: string;
   note: string;
+  recurrence: "none" | RecurrenceFrequency;
 };
 
 export type QuickAddState = {

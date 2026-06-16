@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import Svg, { Line } from "react-native-svg";
 import { theme } from "@/constants/theme";
 import { formatCurrency } from "@/utils/currency";
 
@@ -24,31 +25,55 @@ const legend = [
 
 export function MonthlyFlowCard({ title, subtitle, data }: Props) {
   const maxValue = Math.max(1, ...data.flatMap((item) => [item.income, item.expenses, item.investments]));
+  const latest = data[data.length - 1];
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
+        <View style={styles.headerCopy}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+        </View>
+        <View style={styles.signalPill}>
+          <Text style={styles.signalLabel}>Flow signal</Text>
+          <Text style={styles.signalValue}>{latest ? latest.label : "Waiting"}</Text>
+        </View>
       </View>
 
       {data.length === 0 ? (
         <Text style={styles.empty}>Add a few entries to start seeing monthly cash flow trends.</Text>
       ) : (
         <>
-          <View style={styles.chart}>
-            {data.map((item) => (
-              <View key={item.label} style={styles.group}>
-                <View style={styles.groupBars}>
-                  <View style={[styles.bar, styles.incomeBar, { height: `${(item.income / maxValue) * 100}%` }]} />
-                  <View style={[styles.bar, styles.expenseBar, { height: `${(item.expenses / maxValue) * 100}%` }]} />
-                  <View
-                    style={[styles.bar, styles.investmentBar, { height: `${(item.investments / maxValue) * 100}%` }]}
+          <View style={styles.chartShell}>
+            <View pointerEvents="none" style={styles.chartGrid}>
+              <Svg width="100%" height="160" viewBox="0 0 320 160">
+                {[32, 70, 108, 146].map((y) => (
+                  <Line
+                    key={y}
+                    x1="0"
+                    y1={String(y)}
+                    x2="320"
+                    y2={String(y)}
+                    stroke="rgba(255,255,255,0.08)"
+                    strokeDasharray="3 7"
                   />
+                ))}
+              </Svg>
+            </View>
+            <View style={styles.chart}>
+              {data.map((item) => (
+                <View key={item.label} style={styles.group}>
+                  <View style={styles.groupBars}>
+                    <View style={[styles.bar, styles.incomeBar, { height: `${(item.income / maxValue) * 100}%` }]} />
+                    <View style={[styles.bar, styles.expenseBar, { height: `${(item.expenses / maxValue) * 100}%` }]} />
+                    <View
+                      style={[styles.bar, styles.investmentBar, { height: `${(item.investments / maxValue) * 100}%` }]}
+                    />
+                  </View>
+                  <Text style={styles.groupLabel}>{item.label}</Text>
                 </View>
-                <Text style={styles.groupLabel}>{item.label}</Text>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
 
           <View style={styles.legendRow}>
@@ -60,24 +85,22 @@ export function MonthlyFlowCard({ title, subtitle, data }: Props) {
             ))}
           </View>
 
-          <View style={styles.footerGrid}>
-            {data.slice(-1).map((item) => (
-              <React.Fragment key={`${item.label}-totals`}>
-                <View style={styles.footerStat}>
-                  <Text style={styles.footerLabel}>Income</Text>
-                  <Text style={styles.footerValue}>{formatCurrency(item.income)}</Text>
-                </View>
-                <View style={styles.footerStat}>
-                  <Text style={styles.footerLabel}>Expenses</Text>
-                  <Text style={styles.footerValue}>{formatCurrency(item.expenses)}</Text>
-                </View>
-                <View style={styles.footerStat}>
-                  <Text style={styles.footerLabel}>Investments</Text>
-                  <Text style={styles.footerValue}>{formatCurrency(item.investments)}</Text>
-                </View>
-              </React.Fragment>
-            ))}
-          </View>
+          {latest ? (
+            <View style={styles.footerGrid}>
+              <View style={styles.footerStat}>
+                <Text style={styles.footerLabel}>Income</Text>
+                <Text style={styles.footerValue}>{formatCurrency(latest.income)}</Text>
+              </View>
+              <View style={styles.footerStat}>
+                <Text style={styles.footerLabel}>Expenses</Text>
+                <Text style={styles.footerValue}>{formatCurrency(latest.expenses)}</Text>
+              </View>
+              <View style={styles.footerStat}>
+                <Text style={styles.footerLabel}>Investments</Text>
+                <Text style={styles.footerValue}>{formatCurrency(latest.investments)}</Text>
+              </View>
+            </View>
+          ) : null}
         </>
       )}
     </View>
@@ -86,15 +109,23 @@ export function MonthlyFlowCard({ title, subtitle, data }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.surfaceGlass,
+    borderRadius: theme.radius.xl,
     padding: theme.spacing.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
     gap: theme.spacing.md,
+    overflow: "hidden",
     ...theme.shadow.soft,
   },
   header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: theme.spacing.md,
+  },
+  headerCopy: {
+    flex: 1,
     gap: 6,
   },
   title: {
@@ -107,18 +138,59 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.body,
     lineHeight: 21,
   },
+  signalPill: {
+    minWidth: 94,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: theme.radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    gap: 4,
+  },
+  signalLabel: {
+    color: theme.colors.textSoft,
+    fontSize: theme.typography.tiny,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  signalValue: {
+    color: theme.colors.text,
+    fontSize: theme.typography.caption,
+    fontWeight: "800",
+  },
   empty: {
     color: theme.colors.textMuted,
     fontSize: theme.typography.body,
     lineHeight: 22,
   },
+  chartShell: {
+    position: "relative",
+    minHeight: 180,
+    borderRadius: theme.radius.lg,
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    paddingHorizontal: 14,
+    paddingTop: 16,
+    paddingBottom: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  chartGrid: {
+    position: "absolute",
+    top: 12,
+    right: 10,
+    left: 10,
+    height: 160,
+  },
   chart: {
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
-    minHeight: 170,
+    minHeight: 160,
     gap: 12,
-    paddingTop: theme.spacing.md,
+    zIndex: 1,
   },
   group: {
     flex: 1,
@@ -126,24 +198,36 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   groupBars: {
-    height: 140,
+    height: 136,
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 6,
   },
   bar: {
-    width: 10,
-    minHeight: 8,
+    width: 11,
+    minHeight: 10,
     borderRadius: 999,
   },
   incomeBar: {
     backgroundColor: theme.colors.success,
+    shadowColor: theme.colors.success,
+    shadowOpacity: 0.24,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
   },
   expenseBar: {
     backgroundColor: theme.colors.danger,
+    shadowColor: theme.colors.danger,
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
   },
   investmentBar: {
     backgroundColor: theme.colors.accent,
+    shadowColor: theme.colors.accent,
+    shadowOpacity: 0.24,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
   },
   groupLabel: {
     color: theme.colors.textSoft,
@@ -176,7 +260,7 @@ const styles = StyleSheet.create({
   },
   footerStat: {
     flex: 1,
-    backgroundColor: theme.colors.surfaceSoft,
+    backgroundColor: "rgba(255,255,255,0.04)",
     borderRadius: theme.radius.md,
     padding: 12,
     gap: 6,

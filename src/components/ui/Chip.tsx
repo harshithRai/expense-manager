@@ -22,13 +22,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
     borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.surfaceSoft,
+    backgroundColor: "rgba(255,255,255,0.04)",
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
   activeChip: {
-    backgroundColor: "rgba(121,168,255,0.16)",
-    borderColor: "rgba(121,168,255,0.5)",
+    backgroundColor: "rgba(121,168,255,0.18)",
+    borderColor: "rgba(121,168,255,0.36)",
   },
   text: {
     color: theme.colors.textMuted,
