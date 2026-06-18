@@ -26,6 +26,14 @@ const legend = [
 export function MonthlyFlowCard({ title, subtitle, data }: Props) {
   const maxValue = Math.max(1, ...data.flatMap((item) => [item.income, item.expenses, item.investments]));
   const latest = data[data.length - 1];
+  const previous = data[data.length - 2];
+  const latestNet = latest ? latest.income - latest.expenses - latest.investments : 0;
+  const previousNet = previous ? previous.income - previous.expenses - previous.investments : 0;
+  const netDelta = latestNet - previousNet;
+  const trendLabel = previous
+    ? `${netDelta >= 0 ? "+" : "-"}${formatCurrency(Math.abs(netDelta))} vs ${previous.label}`
+    : "Need one more month for a trend";
+  const trendTone = latestNet >= 0 ? styles.trendPositive : styles.trendNegative;
 
   return (
     <View style={styles.card}>
@@ -35,7 +43,7 @@ export function MonthlyFlowCard({ title, subtitle, data }: Props) {
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
         <View style={styles.signalPill}>
-          <Text style={styles.signalLabel}>Flow signal</Text>
+          <Text style={styles.signalLabel}>Latest month</Text>
           <Text style={styles.signalValue}>{latest ? latest.label : "Waiting"}</Text>
         </View>
       </View>
@@ -44,6 +52,18 @@ export function MonthlyFlowCard({ title, subtitle, data }: Props) {
         <Text style={styles.empty}>Add a few entries to start seeing monthly cash flow trends.</Text>
       ) : (
         <>
+          <View style={styles.trendCard}>
+            <View style={styles.trendHeader}>
+              <Text style={styles.trendEyebrow}>Real trend</Text>
+              <Text style={[styles.trendValue, trendTone]}>
+                {latestNet >= 0 ? "+" : "-"}
+                {formatCurrency(Math.abs(latestNet))}
+              </Text>
+            </View>
+            <Text style={styles.trendTitle}>Net monthly flow</Text>
+            <Text style={styles.trendSubtitle}>{trendLabel}</Text>
+          </View>
+
           <View style={styles.chartShell}>
             <View pointerEvents="none" style={styles.chartGrid}>
               <Svg width="100%" height="160" viewBox="0 0 320 160">
@@ -164,6 +184,47 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: theme.typography.body,
     lineHeight: 22,
+  },
+  trendCard: {
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    gap: 4,
+  },
+  trendHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing.md,
+  },
+  trendEyebrow: {
+    color: theme.colors.textSoft,
+    fontSize: theme.typography.tiny,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  trendValue: {
+    fontSize: theme.typography.body,
+    fontWeight: "800",
+  },
+  trendPositive: {
+    color: theme.colors.success,
+  },
+  trendNegative: {
+    color: theme.colors.danger,
+  },
+  trendTitle: {
+    color: theme.colors.text,
+    fontSize: theme.typography.body,
+    fontWeight: "800",
+  },
+  trendSubtitle: {
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.caption,
+    lineHeight: 18,
   },
   chartShell: {
     position: "relative",

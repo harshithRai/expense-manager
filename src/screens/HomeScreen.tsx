@@ -26,18 +26,18 @@ export function HomeScreen() {
   const recentTransactions = transactions.slice(0, 4);
   const categoryBudgetSummaries = getCategoryBudgetSummaries(transactions, budget).slice(0, 3);
   const monthLabel = new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric" }).format(new Date());
-  const pulseTone = summary.netCashflow >= 0 ? "Balanced rise" : "Pressure zone";
+  const pulseTone = summary.netCashflow >= 0 ? "Net positive" : "Net negative";
 
   return (
     <Screen>
       <Animated.View entering={FadeInDown.duration(350)} style={styles.hero}>
         <View style={styles.heroCopy}>
           <Text style={styles.eyebrow}>Financial weather</Text>
-          <Text style={styles.heading}>Your money has a mood in {monthLabel}.</Text>
+          <Text style={styles.heading}>Your monthly money flow for {monthLabel}.</Text>
           <Text style={styles.subheading}>
             {transactions.length === 0
-              ? "Log the first movement and the dashboard will start building a pulse around it."
-              : `${transactions.length} ${transactions.length === 1 ? "entry" : "entries"} are shaping this month’s atmosphere.`}
+              ? "Log the first transaction and the dashboard will start showing real monthly movement."
+              : `${transactions.length} ${transactions.length === 1 ? "transaction is" : "transactions are"} currently driving ${summary.netCashflow >= 0 ? "a positive" : "a negative"} net flow.`}
           </Text>
         </View>
 
@@ -92,7 +92,7 @@ export function HomeScreen() {
         <>
           <MonthlyFlowCard
             title="Monthly flow"
-            subtitle="See income, expenditure, and investments as separate waveforms instead of one flat summary."
+            subtitle="Track actual monthly income, expenses, investments, and the net-flow trend in one place."
             data={monthlyFlow}
           />
           <View style={styles.outflowCard}>
